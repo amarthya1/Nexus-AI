@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nexus AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <style>
+    :root {
+      --bg-primary: #1A112A;
+      --bg-secondary: #241738;
+      --text-primary: #D1A7FF;
+      --text-highlight: #FF00FF;
+      --text-active-button: #59178E;
+      --border-color: #3D215E;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 16px;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #root {
+      height: 100%;
+      display: flex;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 240px;
+      flex-shrink: 0;
+      background-color: var(--bg-primary);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-content {
+      padding: 16px;
+      overflow-y: auto;
+      scrollbar-width: none; /* Firefox */
+      flex: 1;
+    }
+    .sidebar-content::-webkit-scrollbar {
+      display: none; /* Safari/Chrome */
+    }
+
+    .new-chat-btn {
+      background: transparent;
+      color: var(--text-primary);
+      border: none;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 12px 0;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .new-chat-btn:hover {
+      opacity: 0.8;
+    }
+    .new-chat-btn span {
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .sidebar-title {
+      font-size: 12px;
+      color: var(--text-primary);
+      margin-top: 24px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0 8px;
+      opacity: 0.8;
+    }
+
+    .active-chat {
+      background-color: var(--text-active-button);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: block;
+      width: 100%;
+      text-align: left;
+      border: none;
+      font-family: inherit;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: default;
+    }
+
+    .sidebar-divider {
+      height: 1px;
+      background-color: var(--border-color);
+      margin: 16px 8px;
+    }
+
+    .previous-chat {
+      background: transparent;
+      color: var(--text-primary);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      display: block;
+      width: 100%;
+      text-align: left;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+    .previous-chat:hover {
+      background-color: var(--bg-secondary);
+    }
+
+    /* Main Chat */
+    .main-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background-color: var(--bg-primary);
+      overflow: hidden;
+    }
+
+    .main-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .highlight-ai {
+      color: var(--text-highlight);
+    }
+
+    .chat-scroll-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-scroll-content {
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .welcome-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding-top: 20vh;
+      padding-bottom: 40px;
+    }
+
+    .welcome-prompt {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--text-highlight);
+    }
+
+    .msg-row {
+      display: flex;
+      margin-bottom: 24px;
+      width: 100%;
+      animation: fadeUp 0.3s ease-out;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg-user {
+      justify-content: flex-end;
+    }
+    .msg-ai {
+      justify-content: flex-start;
+    }
+
+    .bubble {
+      max-width: 80%;
+      padding: 16px 20px;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .bubble-user {
+      background-color: var(--text-primary);
+      color: var(--bg-primary);
+      border-radius: 16px 16px 0 16px;
+    }
+
+    .bubble-ai {
+      background-color: var(--text-active-button);
+      color: var(--text-primary);
+      border-radius: 16px 16px 16px 0;
+      border: 1px solid var(--border-color);
+    }
+
+    /* Markdown elements inside AI bubble */
+    .bubble-ai pre {
+      background-color: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+      margin: 12px 0;
+      overflow-x: auto;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    .bubble-ai code {
+      font-family: monospace;
+      background-color: var(--bg-primary);
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .bubble-ai pre code {
+      background-color: transparent;
+      padding: 0;
+    }
+    .bubble-ai p {
+      margin-bottom: 12px;
+    }
+    .bubble-ai p:last-child {
+      margin-bottom: 0;
+    }
+    .bubble-ai ul, .bubble-ai ol {
+      margin-left: 20px;
+      margin-bottom: 12px;
+    }
+    .bubble-ai h2, .bubble-ai h3, .bubble-ai h4 {
+      margin-top: 16px;
+      margin-bottom: 8px;
+      color: white;
+    }
+
+    /* Input Area */
+    .input-footer {
+      padding: 24px;
+      display: flex;
+      justify-content: center;
+      background-color: var(--bg-primary);
+      flex-shrink: 0;
+    }
+
+    .input-container {
+      width: 100%;
+      max-width: 800px;
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      padding: 8px 16px;
+      transition: border-color 0.2s;
+    }
+    .input-container:focus-within {
+      border-color: var(--text-highlight);
+    }
+
+    .chat-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 16px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      padding: 8px 0;
+      min-height: 24px;
+      max-height: 120px;
+      line-height: 1.5;
+    }
+    .chat-input::placeholder {
+      color: #8C78A5; /* A muted lavender */
+    }
+
+    .submit-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-highlight);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: transform 0.1s;
+    }
+    .submit-btn:hover {
+      transform: scale(1.1);
+    }
+    .submit-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .typing-dots {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      height: 24px;
+    }
+    .typing-dots span {
+      width: 6px;
+      height: 6px;
+      background-color: var(--text-primary);
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+    .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useRef, useEffect, useCallback } = React;
+
+    const API_URL = 'http://localhost:8000/api/chat';
+
+    function escapeHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function formatText(text) {
+      // Fenced code blocks
+      text = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) =>
+        `<pre><code>${escapeHtml(code.trim())}</code></pre>`
+      );
+      // Inline code
+      text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+      // Bold
+      text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      // Italic
+      text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+      const paras = text.split(/\n\n+/);
+      return paras.map(p => {
+        const lines = p.split('\n');
+
+        // Unordered list
+        if (lines.every(l => /^\s*[-•]\s/.test(l.trim()) || l.trim() === '')) {
+          const items = lines.filter(l => l.trim() !== '').map(l => `<li>${l.replace(/^\s*[-•]\s*/, '')}</li>`).join('');
+          return `<ul>${items}</ul>`;
+        }
+
+        // Ordered list
+        if (lines.every(l => /^\s*\d+[.)]\s/.test(l.trim()) || l.trim() === '')) {
+          const items = lines.filter(l => l.trim() !== '').map(l => `<li>${l.replace(/^\s*\d+[.)]\s*/, '')}</li>`).join('');
+          return `<ol>${items}</ol>`;
+        }
+
+        // Headings
+        if (lines.length === 1) {
+          const h3 = lines[0].match(/^###\s+(.+)/);
+          if (h3) return `<h4>${h3[1]}</h4>`;
+          const h2 = lines[0].match(/^##\s+(.+)/);
+          if (h2) return `<h3>${h2[1]}</h3>`;
+          const h1 = lines[0].match(/^#\s+(.+)/);
+          if (h1) return `<h2>${h1[1]}</h2>`;
+        }
+
+        return `<p>${lines.join('<br/>')}</p>`;
+      }).join('');
+    }
+
+    function App() {
+      const [messages,  setMessages]  = useState([]);   
+      const [input,     setInput]     = useState('');
+      const [loading,   setLoading]   = useState(false);
+      const [sessionId, setSessionId] = useState(() => localStorage.getItem('chat_session_id') || null);
+      const [sessions,  setSessions]  = useState([]);
+
+      const loadAllSessions = async () => {
+        try {
+          const res = await fetch('http://localhost:8000/api/sessions');
+          if (res.ok) {
+            const data = await res.json();
+            setSessions(data.sessions);
+          }
+        } catch (err) {
+          console.error("Failed loading sessions:", err);
+        }
+      };
+
+      const loadChatHistory = async (id) => {
+        if (!id) return;
+        try {
+          setLoading(true);
+          const res = await fetch(`http://localhost:8000/api/chat/history/${id}`);
+          if (res.ok) {
+            const data = await res.json();
+            const mapped = (data.history || []).map(m => ({
+              role: m.role,
+              content: m.content
+            }));
+            setMessages(mapped);
+          }
+        } catch (err) {
+          console.error("Failed fetching history:", err);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      useEffect(() => {
+        loadAllSessions();
+      }, [sessionId]);
+
+      useEffect(() => {
+        if (sessionId) {
+          localStorage.setItem('chat_session_id', sessionId);
+          loadChatHistory(sessionId);
+        } else {
+          localStorage.removeItem('chat_session_id');
+          setMessages([]);
+        }
+      }, [sessionId]);
+
+      const bottomRef = useRef(null);
+      const textareaRef = useRef(null);
+
+      useEffect(() => {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, [messages, loading]);
+
+      const handleNewChat = () => {
+        setSessionId(null);
+        setMessages([]);
+      };
+
+      const handleSend = async () => {
+        const text = input.trim();
+        if (!text || loading) return;
+
+        setInput('');
+
+        const userMsg = { role: 'user', content: text };
+        const newHistory = [...messages, userMsg];
+        setMessages(newHistory);
+        setLoading(true);
+
+        try {
+          const res = await fetch(API_URL, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({
+              messages: newHistory.map(({ role, content }) => ({ role, content })),
+              session_id: sessionId
+            }),
+          });
+
+          if (!res.ok) throw new Error("Server error");
+          const data = await res.json();
+          
+          if (data.session_id && data.session_id !== sessionId) {
+            setSessionId(data.session_id);
+            loadAllSessions();
+          }
+
+          setMessages(prev => [
+            ...prev,
+            { role: 'assistant', content: data.response }
+          ]);
+        } catch (err) {
+          console.error(err);
+          setMessages(prev => prev.slice(0, -1));
+        } finally {
+          setLoading(false);
+          setTimeout(() => textareaRef.current?.focus(), 50);
+        }
+      };
+
+      const handleKeyDown = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          handleSend();
+        }
+      };
+
+      const activeSession = sessions.find(s => s.id === sessionId);
+      const previousSessions = sessions.filter(s => s.id !== sessionId);
+
+      return (
+        <React.Fragment>
+          {/* Sidebar */}
+          <aside className="sidebar">
+            <div className="sidebar-content">
+              <button className="new-chat-btn" onClick={handleNewChat}>
+                <span>+</span> New Chat
+              </button>
+              
+              <div className="sidebar-title">Now Chatting</div>
+              <button className="active-chat">
+                {activeSession ? (activeSession.title || 'Conversation') : 'New Chat'}
+              </button>
+
+              <div className="sidebar-divider"></div>
+
+              <div className="sidebar-title">Previous Chats</div>
+              {previousSessions.length === 0 ? (
+                <div style={{color: 'var(--border-color)', fontSize: '14px', padding: '0 8px'}}>None</div>
+              ) : (
+                previousSessions.map(s => (
+                  <button key={s.id} className="previous-chat" onClick={() => setSessionId(s.id)}>
+                    {s.title || 'Conversation'}
+                  </button>
+                ))
+              )}
+            </div>
+          </aside>
+
+          {/* Main Area */}
+          <div className="main-area">
+            <header className="main-header">
+              <div className="header-title">Nexus <span className="highlight-ai">AI</span></div>
+            </header>
+
+            <div className="chat-scroll-area">
+              <div className="chat-scroll-content">
+                {messages.length === 0 ? (
+                  <div className="welcome-container">
+                    <h2 className="welcome-prompt">How can i help you?</h2>
+                  </div>
+                ) : (
+                  messages.map((msg, i) => {
+                    const isUser = msg.role === 'user';
+                    return (
+                      <div key={i} className={`msg-row ${isUser ? 'msg-user' : 'msg-ai'}`}>
+                        <div className={`bubble ${isUser ? 'bubble-user' : 'bubble-ai'}`}>
+                          {isUser ? (
+                            msg.content
+                          ) : (
+                            <div dangerouslySetInnerHTML={{ __html: formatText(msg.content) }} />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+
+                {loading && (
+                  <div className="msg-row msg-ai">
+                    <div className="bubble bubble-ai">
+                      <div className="typing-dots"><span></span><span></span><span></span></div>
+                    </div>
+                  </div>
+                )}
+                <div ref={bottomRef} />
+              </div>
+            </div>
+
+            <footer className="input-footer">
+              <div className="input-container">
+                <textarea
+                  ref={textareaRef}
+                  className="chat-input"
+                  placeholder="Ask anything..."
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  disabled={loading}
+                  rows={1}
+                />
+                <button className="submit-btn" onClick={handleSend} disabled={!input.trim() || loading}>
+                  {/* Play Button Icon */}
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 5V19L19 12L8 5Z" />
+                  </svg>
+                </button>
+              </div>
+            </footer>
+          </div>
+        </React.Fragment>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
