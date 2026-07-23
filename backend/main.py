@@ -418,20 +418,16 @@ def get_chat_history(session_id: str) -> Dict[str, List[ChatHistoryItem]]:
     """Return all messages for a given session in chronological order."""
     client = _ensure_supabase()
     try:
-        response = _execute_db(
-            "fetch chat history",
-            client.table("chat_messages")
-            .select("sender,content,model_used,intent,created_at")
-            .eq("session_id", session_id)
-            .order("created_at", desc=False),
-        )
-    except HTTPException:
-        raise
+        response = client.table("chat_messages") \
+            .select("sender,content,model_used,intent,created_at") \
+            .eq("session_id", session_id) \
+            .order("created_at", desc=False) \
+            .execute()
+        rows = getattr(response, "data", []) or []
     except Exception as exc:
-        logger.exception("Unexpected error fetching chat history: %s", exc)
-        raise HTTPException(status_code=500, detail="Failed to fetch chat history.")
+        logger.exception("Error fetching chat history for session %s: %s", session_id, exc)
+        rows = []
 
-    rows = getattr(response, "data", []) or []
     history: List[ChatHistoryItem] = []
     for row in rows:
         sender = (row.get("sender") or "").lower()
