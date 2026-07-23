@@ -83,6 +83,7 @@ class Message(BaseModel):
 class ChatRequest(BaseModel):
     messages: List[Message]
     session_id: Optional[str] = None
+    user_id: str
 
 
 class ChatResponse(BaseModel):
@@ -161,14 +162,14 @@ def _find_last_user_message(messages: List[Message]) -> Optional[str]:
     return None
 
 
-def _create_chat_session(first_prompt: str) -> str:
+def _create_chat_session(first_prompt: str, user_id: str) -> str:
     """Insert a new row into chat_sessions and return its UUID."""
     client = _ensure_supabase()
     session_title = _generate_session_title(first_prompt)
     try:
         response = _execute_db(
             "create chat session",
-            client.table("chat_sessions").insert({"title": session_title}).select("id"),
+            client.table("chat_sessions").insert({"title": session_title, "user_id": user_id}).select("id"),
         )
     except HTTPException:
         raise
@@ -364,7 +365,7 @@ def chat(request: ChatRequest):
         raise HTTPException(status_code=400, detail="Unable to locate the latest user message.")
 
     # Create or reuse session
-    session_id = request.session_id or _create_chat_session(first_user_prompt)
+    session_id = request.session_id or _create_chat_session(first_user_prompt, request.user_id)
 
     # Classify and route
     intent = classify_intent(last_user_msg)
@@ -393,14 +394,15 @@ def chat(request: ChatRequest):
 
 
 @app.get("/api/sessions")
-def get_all_sessions() -> Dict[str, List[SessionSummary]]:
-    """Return all chat sessions ordered by most recent first."""
+def get_all_sessions(user_id: str) -> Dict[str, List[SessionSummary]]:
+    """Return all chat sessions ordered by most recent first, filtered by user_id."""
     client = _ensure_supabase()
     try:
         response = _execute_db(
             "fetch chat sessions",
             client.table("chat_sessions")
             .select("id,title,created_at")
+            .eq("user_id", user_id)
             .order("created_at", desc=True),
         )
     except HTTPException:

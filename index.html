@@ -139,6 +139,37 @@
       background-color: var(--bg-secondary);
     }
 
+    /* Mobile Toggle */
+    .mobile-toggle {
+      display: none;
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      font-size: 24px;
+      cursor: pointer;
+      margin-right: 16px;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .sidebar {
+        position: absolute;
+        z-index: 100;
+        height: 100%;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      .mobile-toggle {
+        display: block;
+      }
+      .bubble {
+        max-width: 90%;
+      }
+    }
+
     /* Main Chat */
     .main-area {
       flex: 1;
@@ -418,10 +449,20 @@
       const [loading,   setLoading]   = useState(false);
       const [sessionId, setSessionId] = useState(() => localStorage.getItem('chat_session_id') || null);
       const [sessions,  setSessions]  = useState([]);
+      const [sidebarOpen, setSidebarOpen] = useState(false);
+
+      const [userId] = useState(() => {
+        let uid = localStorage.getItem("nexus_user_id");
+        if (!uid) {
+          uid = crypto.randomUUID();
+          localStorage.setItem("nexus_user_id", uid);
+        }
+        return uid;
+      });
 
       const loadAllSessions = async () => {
         try {
-          const res = await fetch(`${API_BASE_URL}/api/sessions`);
+          const res = await fetch(`${API_BASE_URL}/api/sessions?user_id=${userId}`);
           if (res.ok) {
             const data = await res.json();
             setSessions(data.sessions);
@@ -495,7 +536,8 @@
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify({
               messages: newHistory.map(({ role, content }) => ({ role, content })),
-              session_id: sessionId
+              session_id: sessionId,
+              user_id: userId
             }),
           });
 
@@ -532,8 +574,16 @@
 
       return (
         <React.Fragment>
+          {/* Sidebar Overlay (Mobile) */}
+          {sidebarOpen && (
+            <div 
+              style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 90 }} 
+              onClick={() => setSidebarOpen(false)} 
+            />
+          )}
+
           {/* Sidebar */}
-          <aside className="sidebar">
+          <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
             <div className="sidebar-content">
               <button className="new-chat-btn" onClick={handleNewChat}>
                 <span>+</span> New Chat
@@ -562,6 +612,9 @@
           {/* Main Area */}
           <div className="main-area">
             <header className="main-header">
+              <button className="mobile-toggle" onClick={() => setSidebarOpen(true)}>
+                ☰
+              </button>
               <div className="header-title">Nexus <span className="highlight-ai">AI</span></div>
             </header>
 
