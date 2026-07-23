@@ -83,7 +83,7 @@ class Message(BaseModel):
 class ChatRequest(BaseModel):
     messages: List[Message]
     session_id: Optional[str] = None
-    user_id: str
+    user_id: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
@@ -162,20 +162,24 @@ def _find_last_user_message(messages: List[Message]) -> Optional[str]:
     return None
 
 
-def _create_chat_session(first_prompt: str, user_id: str) -> str:
+def _create_chat_session(first_prompt: str, user_id: Optional[str] = None) -> str:
     """Insert a new row into chat_sessions and return its UUID."""
     client = _ensure_supabase()
     session_title = _generate_session_title(first_prompt)
+    payload = {"title": session_title}
+    if user_id:
+        payload["user_id"] = user_id
+        
     try:
-        response = _execute_db(
-            "create chat session",
-            client.table("chat_sessions").insert({"title": session_title, "user_id": user_id}).select("id"),
-        )
-    except HTTPException:
-        raise
+        response = client.table("chat_sessions").insert(payload).select("id").execute()
     except Exception as exc:
-        logger.exception("Unexpected error creating chat session: %s", exc)
-        raise HTTPException(status_code=500, detail="Unable to create chat session.")
+        logger.error("Failed to create chat session with user_id: %s", str(exc))
+        try:
+            # Fallback without user_id
+            response = client.table("chat_sessions").insert({"title": session_title}).select("id").execute()
+        except Exception as exc2:
+            logger.error("Fallback to create chat session failed: %s", str(exc2))
+            raise HTTPException(status_code=500, detail="Unable to create chat session.")
 
     data = getattr(response, "data", None)
     if not data or not isinstance(data, list) or not data[0].get("id"):
@@ -394,24 +398,20 @@ def chat(request: ChatRequest):
 
 
 @app.get("/api/sessions")
-def get_all_sessions(user_id: str) -> Dict[str, List[SessionSummary]]:
-    """Return all chat sessions ordered by most recent first, filtered by user_id."""
+def get_all_sessions(user_id: Optional[str] = None) -> Dict[str, List[SessionSummary]]:
+    """Return all chat sessions ordered by most recent first, filtered by user_id if provided."""
     client = _ensure_supabase()
     try:
-        response = _execute_db(
-            "fetch chat sessions",
-            client.table("chat_sessions")
-            .select("id,title,created_at")
-            .eq("user_id", user_id)
-            .order("created_at", desc=True),
-        )
-    except HTTPException:
-        raise
+        query = client.table("chat_sessions").select("id,title,created_at")
+        if user_id:
+            query = query.eq("user_id", user_id)
+        response = query.order("created_at", desc=True).execute()
+        sessions = getattr(response, "data", []) or []
     except Exception as exc:
-        logger.exception("Unexpected error fetching sessions: %s", exc)
-        raise HTTPException(status_code=500, detail="Failed to fetch chat sessions.")
+        logger.error("Database error while fetching sessions: %s", str(exc))
+        # Fall back to an empty list gracefully
+        sessions = []
 
-    sessions = getattr(response, "data", []) or []
     return {"sessions": sessions}
 
 
