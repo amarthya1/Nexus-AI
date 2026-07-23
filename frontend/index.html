@@ -363,7 +363,8 @@
   <script type="text/babel">
     const { useState, useRef, useEffect, useCallback } = React;
 
-    const API_URL = 'http://localhost:8000/api/chat';
+    // Change your API base URL to your live Render backend
+const API_BASE_URL = "https://nexus-ai-1-8osh.onrender.com";;
 
     function escapeHtml(str) {
       return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
