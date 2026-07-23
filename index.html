@@ -421,7 +421,7 @@
 
       const loadAllSessions = async () => {
         try {
-          const res = await fetch('http://localhost:8000/api/sessions');
+          const res = await fetch(`${API_BASE_URL}/api/sessions`);
           if (res.ok) {
             const data = await res.json();
             setSessions(data.sessions);
@@ -435,7 +435,7 @@
         if (!id) return;
         try {
           setLoading(true);
-          const res = await fetch(`http://localhost:8000/api/chat/history/${id}`);
+          const res = await fetch(`${API_BASE_URL}/api/chat/history/${id}`);
           if (res.ok) {
             const data = await res.json();
             const mapped = (data.history || []).map(m => ({
@@ -489,7 +489,7 @@
         setLoading(true);
 
         try {
-          const res = await fetch(API_URL, {
+          const res = await fetch(`${API_BASE_URL}/api/chat`, {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
             body:    JSON.stringify({

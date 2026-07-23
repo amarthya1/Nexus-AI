@@ -3,7 +3,7 @@ const { useState, useRef, useEffect, useCallback } = React;
 /* ─────────────────────────────────────────────
    Constants
 ───────────────────────────────────────────── */
-const API_URL = 'http://localhost:8000/api/chat';
+const API_BASE_URL = 'https://nexus-ai-1-8osh.onrender.com';
 
 const MODEL_META = {
   'OpenAI / gpt-4o-mini':                    { label: 'via GPT-4o mini',       color: 'text-sky-400',      bg: 'bg-sky-400/10',      dot: 'bg-sky-400',      icon: '✦' },
@@ -174,7 +174,7 @@ function App() {
     setLoading(true);
 
     try {
-      const res = await fetch(API_URL, {
+      const res = await fetch(`${API_BASE_URL}/api/chat`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({
