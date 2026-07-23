@@ -5,7 +5,7 @@ FROM python:3.10-slim
 WORKDIR /code
 
 # Copy requirements first to leverage Docker layer caching
-COPY requirements.txt /code/requirements.txt
+COPY backend/requirements.txt /code/requirements.txt
 
 # Install dependencies
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
